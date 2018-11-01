@@ -21,7 +21,20 @@ var name = false;
 
 //show a list of available serial devices
 serial.list(function(err,ports) {
-  console.log("Serial Devices:")
+  console.log("Serial Devices:");
+
+  //remove certain devices from list
+  ports.forEach(function(sPort, index) {
+    if(sPort.comName == '/dev/tty.Bluetooth-Incoming-Port'){ //remove BT port
+      ports.splice(index, 1);
+    }
+  });
+  //log and die when no devices were found
+  if(ports.length==0){
+    console.log("No devices found");
+    return;
+  }
+
   if (process.argv[2] && process.argv[2] == "name") {
     ports.forEach(function(sPort) {
       console.log("deviceName:",sPort.comName);
@@ -31,7 +44,7 @@ serial.list(function(err,ports) {
   else {
     ports.forEach(function(sPort) {
       console.log("id:",sPort.serialNumber);
-    });  
+    });
   }
 });
 
@@ -42,13 +55,13 @@ function connectSerial(sn,id,baud) {
     ports.forEach(function(sPort) {
       if (name) {
         if (sPort.comName == sn) {
-          connectSerDev(sPort,id,baud);  
+          connectSerDev(sPort,id,baud);
         }
       }
       else {
         if (sPort.serialNumber == sn) {
           connectSerDev(sPort,id,baud);
-        }  
+        }
       }
     });
   });
@@ -64,14 +77,14 @@ function connectSerDev(sPort,id,baud) {
   });
 }
 
-//read data from the serial port. 
+//read data from the serial port.
 function readPort(id) {
   if (port[id]) {
     port[id].on('data',function(data) {
       handleSerial(data);
     });
   }
-} 
+}
 
 //send the serial data to match-objects to check if the pattern is matching
 function handleSerial(data) {
@@ -131,11 +144,11 @@ function serverExist(port,id,callback) {
       found = 1;
       oscServer[i].kill();
       oscServer[i] = null;
-      callback();  
+      callback();
     }
   }
   if (!found) {
-    callback();  
+    callback();
   }
 }
 
@@ -143,7 +156,7 @@ function serverExist(port,id,callback) {
  *----------exit-program------------/
  *///-------------------------------/
 
-//handle ctrl+c 
+//handle ctrl+c
 process.on('SIGINT', function(){
   killOsc();
   process.exit (0);
@@ -166,12 +179,12 @@ rl.on('line', (input) => {
 function killOsc() {
   for (var i in oscServer) {
     if (oscServer[i]) {
-      oscServer[i].kill();  
+      oscServer[i].kill();
     }
   }
   for (var i in oscClient) {
     if (oscClient[i]) {
-      oscClient[i].kill();  
+      oscClient[i].kill();
     }
   }
   for (var i in sendSocket) {
@@ -191,7 +204,7 @@ server.listen(8001,function() {
   console.log("De server staat aan! Je kunt deze via localhost:8001 bereiken");
 });
 
-//zorg dat de server alle paths kan bereiken. 
+//zorg dat de server alle paths kan bereiken.
 app.use(express.static(path.join(__dirname,'/')));
 
 //genereer errormessage als de pagina niet bestaat
@@ -204,8 +217,8 @@ app.use(function(req,res,next) {
  *///-------------------------------/
 
 io.on('connection', function (socket) {
-  clients[socket.id] = socket;  
-  
+  clients[socket.id] = socket;
+
   //initialize socket, make a connection with the webpage
   socket.on('oscLib',function(data) {
     sendSocket[data] = clients[data];
@@ -221,7 +234,7 @@ io.on('connection', function (socket) {
       }
       if (data && port[data]) {
         console.log("Device disconnected");
-        port[data].close();  
+        port[data].close();
       }
     });
   });
@@ -232,7 +245,7 @@ io.on('connection', function (socket) {
       oscServer[data.id] = new osc.Server(data.port,'0.0.0.0');
 
       sendSocket[data.id].emit("serverRunning",{"port":data.port});
-        
+
       oscServer[data.id].on("message",function(msg,rinfo) {
         var sendData = {"add":msg[0],"msg":msg[1]};
         sendSocket[data.id].emit('getMessage',sendData);
@@ -260,7 +273,7 @@ io.on('connection', function (socket) {
   socket.on('sendMessage',function(data) {
     if (oscClient[data.id]) {
       oscClient[data.id].send(data.address, data.message, function () {
-      });  
+      });
     }
   });
 
